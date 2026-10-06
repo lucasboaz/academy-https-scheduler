@@ -1,0 +1,55 @@
+name: Academy HTTPS scheduler
+
+# Initial upload when repository variables cannot be verified through the API.
+# No schedule exists in this version. Copy to
+# .github/workflows/academy-scheduler.yml in the separate public repository.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Check configuration or execute one bounded round
+        type: choice
+        default: check
+        options:
+          - check
+          - run
+
+permissions:
+  contents: read
+
+concurrency:
+  group: academy-https-scheduler
+  cancel-in-progress: false
+
+jobs:
+  scheduler:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Require a public repository for free standard runners
+        env:
+          REPOSITORY_PRIVATE: ${{ github.event.repository.private }}
+        run: |
+          if [ "$REPOSITORY_PRIVATE" != "false" ]; then
+            echo "::error::Use a separate public repository; private runner allowances are not an unlimited free schedule."
+            exit 1
+          fi
+      - name: Check out only the scheduler repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Check published HTTPS authentication and protocol
+        env:
+          ACADEMY_SCHEDULER_URL: ${{ vars.ACADEMY_SCHEDULER_URL }}
+          ACADEMY_SCHEDULER_SECRET: ${{ secrets.ACADEMY_SCHEDULER_SECRET }}
+        run: node run.mjs --check
+      - name: Execute one bounded HTTPS round
+        if: inputs.mode == 'run'
+        env:
+          ACADEMY_SCHEDULER_URL: ${{ vars.ACADEMY_SCHEDULER_URL }}
+          ACADEMY_SCHEDULER_SECRET: ${{ secrets.ACADEMY_SCHEDULER_SECRET }}
+        run: node run.mjs
