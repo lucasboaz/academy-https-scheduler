@@ -1,20 +1,11 @@
 name: Academy HTTPS scheduler
 
-# Initial upload when repository variables cannot be verified through the API.
-# No schedule exists in this version. Copy to
-# .github/workflows/academy-scheduler.yml in the separate public repository.
+# Diagnóstico temporário: somente check, sem coleta.
+
 on:
   schedule:
-    - cron: '17,47 * * * *'
+    - cron: '23,53 * * * *'
   workflow_dispatch:
-    inputs:
-      mode:
-        description: Check configuration or execute one bounded round
-        type: choice
-        default: check
-        options:
-          - check
-          - run
 
 permissions:
   contents: read
@@ -27,32 +18,26 @@ jobs:
   scheduler:
     if: github.event_name == 'workflow_dispatch' || vars.ACADEMY_SCHEDULER_ACTIVE == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 5
     steps:
-      - name: Require a public repository for free standard runners
+      - name: Require a public repository
         env:
           REPOSITORY_PRIVATE: ${{ github.event.repository.private }}
         run: |
           if [ "$REPOSITORY_PRIVATE" != "false" ]; then
-            echo "::error::Use a separate public repository; private runner allowances are not an unlimited free schedule."
+            echo "::error::Use the existing public scheduler repository."
             exit 1
           fi
-      - name: Check out only the scheduler repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check out the scheduler
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
       - name: Set up Node.js 22
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '22'
-      - name: Check published HTTPS authentication and protocol
+      - name: Check HTTPS authentication and protocol only
         env:
           ACADEMY_SCHEDULER_URL: ${{ vars.ACADEMY_SCHEDULER_URL }}
           ACADEMY_SCHEDULER_SECRET: ${{ secrets.ACADEMY_SCHEDULER_SECRET }}
         run: node run.mjs --check
-      - name: Execute one bounded HTTPS round
-        if: github.event_name == 'schedule' || inputs.mode == 'run'
-        env:
-          ACADEMY_SCHEDULER_URL: ${{ vars.ACADEMY_SCHEDULER_URL }}
-          ACADEMY_SCHEDULER_SECRET: ${{ secrets.ACADEMY_SCHEDULER_SECRET }}
-        run: node run.mjs
