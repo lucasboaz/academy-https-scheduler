@@ -4,6 +4,8 @@ name: Academy HTTPS scheduler
 # No schedule exists in this version. Copy to
 # .github/workflows/academy-scheduler.yml in the separate public repository.
 on:
+  schedule:
+    - cron: '17,47 * * * *'
   workflow_dispatch:
     inputs:
       mode:
@@ -23,6 +25,7 @@ concurrency:
 
 jobs:
   scheduler:
+    if: github.event_name == 'workflow_dispatch' || vars.ACADEMY_SCHEDULER_ACTIVE == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -48,7 +51,7 @@ jobs:
           ACADEMY_SCHEDULER_SECRET: ${{ secrets.ACADEMY_SCHEDULER_SECRET }}
         run: node run.mjs --check
       - name: Execute one bounded HTTPS round
-        if: inputs.mode == 'run'
+        if: github.event_name == 'schedule' || inputs.mode == 'run'
         env:
           ACADEMY_SCHEDULER_URL: ${{ vars.ACADEMY_SCHEDULER_URL }}
           ACADEMY_SCHEDULER_SECRET: ${{ secrets.ACADEMY_SCHEDULER_SECRET }}
