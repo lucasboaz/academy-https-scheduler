@@ -1,0 +1,32 @@
+name: Academy data freshness pilot
+
+on:
+  schedule:
+    - cron: '0 13 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: academy-data-freshness-pilot
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Check out the verifier
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Node.js 22
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - name: Verify completed Academy audit and coverage
+        env:
+          ACADEMY_SCHEDULER_URL: ${{ vars.ACADEMY_SCHEDULER_URL }}
+          ACADEMY_SCHEDULER_SECRET: ${{ secrets.ACADEMY_SCHEDULER_SECRET }}
+        run: node verify-data.mjs
